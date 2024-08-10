@@ -24,11 +24,11 @@ internal class Utils
         BaseAddress = thisProcess.MainModule!.BaseAddress;
 
         var startupScannerController = modLoader.GetController<IStartupScanner>();
-        /*if (startupScannerController == null || !startupScannerController.TryGetTarget(out _startupScanner))
+        if (startupScannerController == null || !startupScannerController.TryGetTarget(out _startupScanner))
         {
             LogError($"Unable to get controller for Reloaded SigScan Library, stuff won't work :(");
             return false;
-        }*/
+        }
 
         return true;
 

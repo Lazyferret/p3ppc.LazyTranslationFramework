@@ -65,14 +65,6 @@ public unsafe class Mod : ModBase // <= Do not Remove.
     private IHook<GetNameDelegate> _getSLinkNameHook;
     private IHook<GetTextDelegate> _getTextHook;
     private IHook<GetTextDelegate> _getGlossaryTextHook;
-    private IHook<GetKeyboardLayoutDelegate> _getGetKeyboardLayoutHook;
-    private Dictionary<int, nuint[]> _itemNames = new();
-    private Dictionary<int, nuint[]> _characterFullNames = new();
-    private Dictionary<int, nuint[]> _characterFirstNames = new();
-    private Dictionary<int, nuint[]> _characterLastNames = new();
-    private Dictionary<int, nuint[]> _sLinkNames = new();
-    private Dictionary<int, nuint[]> _hardcodedText = new();
-    private Dictionary<int, nuint[]> _glossaryText = new();
     private Language* _language;
 
     private Dictionary<Language, Encoding> _encodings;
@@ -155,105 +147,11 @@ public unsafe class Mod : ModBase // <= Do not Remove.
 
         SetupEncodings();
 
-        /*var GetKeyboardLayoutPointer = GetProcAddress(LoadLibrary("user32.dll"), "GetKeyboardLayout");
-        Utils.LogError($"{GetKeyboardLayoutPointer}");
-        _getGetKeyboardLayoutHook = _hooks.CreateHook<GetKeyboardLayoutDelegate>(GetFixedKeyboardLayout, (long)GetKeyboardLayoutPointer).Activate();
-        Utils.SigScan("E8 ?? ?? ?? ?? 48 8D 15 ?? ?? ?? ?? 48 8B C8 0F B6 84 ?? ?? ?? ?? ??", "GetItemName Ptr", address =>
-        {
-            var funcAddress = Utils.GetGlobalAddress(address + 1);
-            Utils.Log($"Found GetItemName function at 0x{funcAddress:X}");
-            _getItemNameHook = _hooks.CreateHook<GetNameDelegate>(GetItemName, (long)funcAddress).Activate();
-            //nuint* text = (nuint*)0x1405E4468;
-            /*nuint** text = (nuint**)Utils.GetGlobalAddress(address + 45);
-            for (int i = 0; i < 10; i++)
-            {
-                byte* ptr = (byte*)text[i];
-                int count = 0;
-                while (*(ptr + count) != 0)
-                    count++;
-                var textStr = Encoding.ASCII.GetString(ptr, count);
-                Utils.Log($"{i} = \"{textStr}\"");
-            };
-            
-        });*/
-
-        Utils.SigScan("E8 ?? ?? ?? ?? F3 0F 10 0D ?? ?? ?? ?? 8B CF", "GetCharacterFullName Ptr", address =>
-        {
-            var funcAddress = Utils.GetGlobalAddress(address + 1);
-            Utils.LogDebug($"Found GetCharacterFullName function at 0x{funcAddress:X}");
-            _getCharacterFullNameHook = _hooks.CreateHook<GetNameDelegate>(GetCharacterFullName, (long)funcAddress).Activate();
-        });
-
-        Utils.SigScan("0F 88 ?? ?? ?? ?? 41 51 48 89 14 24", "GetCharacterFirstName Ptr", address =>
-        {
-            var funcAddress = Utils.GetGlobalAddress(address + 2);
-            Utils.LogDebug($"Found GetCharacterFirstName function at 0x{funcAddress:X}");
-            _getCharacterFirstNameHook = _hooks.CreateHook<GetNameDelegate>(GetCharacterFirstName, (long)funcAddress).Activate();
-        });
-
-        // TODO find GetCharacterLastName if it even exists (last names don't really seem to be used)
-        //Utils.SigScan("E8 ?? ?? ?? ?? EB ?? F3 0F 10 BC 24 ?? ?? ?? ??", "GetCharacterLastName Ptr", address =>
-        //{
-        //    var funcAddress = Utils.GetGlobalAddress(address + 1);
-        //    Utils.LogDebug($"Found GetCharacterLastName function at 0x{funcAddress:X}");
-        //    _getCharacterLastNameHook = _hooks.CreateHook<GetNameDelegate>(GetCharacterLastName, (long)funcAddress).Activate();
-        //});
-
-        Utils.SigScan("48 89 5C 24 ?? 57 48 83 EC 20 0F B7 D9 48 8D 0D ?? ?? ?? ?? E8 ?? ?? ?? ?? 48 8B 3D ?? ?? ?? ?? 3B 5F ?? 72 ?? 8B 15 ?? ?? ?? ?? 48 8D 0D ?? ?? ?? ?? 83 C2 02 E8 ?? ?? ?? ?? C1 E3 06 48 83 C7 08 89 D8", "GetSLinkName", address =>
-        {
-            _getSLinkNameHook = _hooks.CreateHook<GetNameDelegate>(GetSLinkName, address).Activate();
-        });
-
-        Utils.SigScan("48 63 05 ?? ?? ?? ?? 0F 57 F6", "LanguagePtr", address =>
-        {
-            var languageAddress = Utils.GetGlobalAddress(address + 3);
-            Utils.LogDebug($"Found Language at 0x{languageAddress:X}");
-            _language = (Language*)languageAddress;
-        });
-
-        Utils.SigScan("48 89 5C 24 ?? 57 48 83 EC 20 8B D9 8B FA 48 8D 0D ?? ?? ?? ?? E8 ?? ?? ?? ?? 4C 63 05 ?? ?? ?? ??", "HardcodedText", address =>
-        {
-            _getTextHook = _hooks.CreateHook<GetTextDelegate>(GetText, address).Activate();
-            
-            /*
-            // Dump text
-            nuint** text = (nuint**)Utils.GetGlobalAddress(address + 44);
-            for(int i = 0; i < 142; i++)
-            {
-                byte* ptr = (byte*)text[(int)Language.English][i];
-                int count = 0;
-                while (*(ptr + count) != 0)
-                    count++;
-                var textStr = Encoding.ASCII.GetString(ptr, count);
-                Utils.Log($"{i} = \"{textStr}\"");
-            */            
-        });
-
-        Utils.SigScan("48 89 5C 24 ?? 57 48 83 EC 20 48 63 F9 48 8D 0D ?? ?? ?? ?? 48 63 DA E8 ?? ?? ?? ?? 48 63 05 ?? ?? ?? ??", "GetGlossaryText", address =>
-        {
-            _getGlossaryTextHook = _hooks.CreateHook<GetTextDelegate>(GetGlossaryText, address).Activate();
-            /*
-            //Dump text
-            //nuint* text = (nuint*)Utils.GetGlobalAddress(address + 76); // Couldn't get it working, just hardcode, who cares...
-            nuint* text = (nuint*)0x14079c930;
-            for (int i = 0; i < 349; i++)
-            {
-                byte* ptr = (byte*)text[i];
-                int count = 0;
-                while (*(ptr + count) != 0)
-                    count++;
-                var textStr = Encoding.ASCII.GetString(ptr, count);
-                Utils.Log($"{i} = \"{textStr}\"");
-            }*/
-        });
-        
-
-
         _modLoader.ModLoading += OnModLoading;
         
-        foreach (var mod in _modLoader.GetActiveMods().Where(x => x.Generic.ModDependencies.Contains(_modConfig.ModIcon))){
+        /*foreach (var mod in _modLoader.GetActiveMods().Where(x => x.Generic.ModDependencies.Contains(_modConfig.ModIcon))){
             AddNamesFromDir(_modLoader.GetDirectoryForModId(mod.Generic.ModId));
-        }
+        }*/
     }
 
     public void OnModLoading(IModV1 mod, IModConfigV1 config)
@@ -262,7 +160,7 @@ public unsafe class Mod : ModBase // <= Do not Remove.
         {
             AddCustomEncoding(_modLoader.GetDirectoryForModId(config.ModId), "CustomEncoding.json");
             AddRawPointermap(_modLoader.GetDirectoryForModId(config.ModId), "RawPointermap.json");
-            AddNamesFromDir(_modLoader.GetDirectoryForModId(config.ModId));
+            //AddNamesFromDir(_modLoader.GetDirectoryForModId(config.ModId));
             //Utils.LogError(RawPointermap[0x1405fcc78]);
             WriteRawPointermap();
             
@@ -275,14 +173,6 @@ public unsafe class Mod : ModBase // <= Do not Remove.
 
     }
 
-    private void AddNamesFromDir(string dir)
-    {
-        AddNamesFromDir<Name, string?>(dir, _itemNames, "ItemNames.json", WriteGenericName);
-        AddNamesFromDir<Name, string?>(dir, _sLinkNames, "SLinkNames.json", WriteGenericName);
-        AddNamesFromDir<CharacterName, NameParts?>(dir, _characterFullNames, "CharacterNames.json", WriteCharacterName);
-        AddNamesFromDir<Name, string?>(dir, _hardcodedText, "Text.json", WriteGenericName);
-        AddNamesFromDir<Name, string?>(dir, _glossaryText, "Glossary.json", WriteGenericName);
-    }
     public void AddCustomEncoding(string dir, string nameFile)
     {
         var encPath = Path.Combine(dir, nameFile);
@@ -339,35 +229,6 @@ public unsafe class Mod : ModBase // <= Do not Remove.
         namesDict[id][lang] = address;
     }
 
-    private void WriteCharacterName(object langName, Dictionary<int, nuint[]> namesDict, int id, int lang)
-    {
-        var name = (NameParts)langName;
-        if (name.First != null)
-        {
-            if (!_characterFirstNames.ContainsKey(id))
-                _characterFirstNames[id] = new nuint[9];
-
-            var address = WriteString(name.First, (Language)lang);
-            _characterFirstNames[id][lang] = address;
-        }
-
-        if (name.Last != null)
-        {
-            if (!_characterLastNames.ContainsKey(id))
-                _characterLastNames[id] = new nuint[9];
-
-            var address = WriteString(name.Last, (Language)lang);
-            _characterLastNames[id][lang] = address;
-        }
-
-        var fullName = name.Full;
-        if (fullName == null)
-            fullName = $"{(name.First == null ? "" : name.First)} {(name.Last == null ? "" : name.Last)}";
-
-        var fullAddress = WriteString(fullName, (Language)lang);
-        _characterFullNames[id][lang] = fullAddress;
-
-    }
     private byte[] GetBytesCustomEnc(string text)
     {
         
@@ -411,92 +272,6 @@ public unsafe class Mod : ModBase // <= Do not Remove.
         _memory.WriteRaw(address, bytes);
         return address;
     }
-    /*private static void RawPointermapSigScan(string pattern, string name, Action<nint> action)
-    {
-        
-        Utils._startupScanner.AddMainModuleScan(pattern, result =>
-        {
-                    if (result.Found)
-                    {
-                        
-                        _memory.SafeWrite(Utils.BaseAddress + (nuint)result.Offset, fileContents);
-                        Utils.Log($"Successfully found and overwrote pattern in ");
-                    }
-                    else
-                        Utils.LogError($"Lazyferret is sad :(");
-                });
-    }*/
-
-    private nuint GetItemName(short item)
-    {
-        if (!_itemNames.TryGetValue(item, out var name))
-        {
-            return _getItemNameHook.OriginalFunction(item);
-        }
-
-        var langName = name[(int)*_language];
-        if (langName == nuint.Zero)
-            return _getItemNameHook.OriginalFunction(item);
-
-        return langName;
-    }
-
-    private nuint GetCharacterFullName(short character)
-    {
-        if (!_characterFullNames.TryGetValue(character, out var name))
-        {
-            return _getCharacterFullNameHook.OriginalFunction(character);
-        }
-
-        var langName = name[(int)*_language];
-        if (langName == nuint.Zero)
-            return _getCharacterFullNameHook.OriginalFunction(character);
-
-        return langName;
-    }
-
-    private nuint GetCharacterFirstName(short character)
-    {
-        if (!_characterFirstNames.TryGetValue(character, out var name))
-        {
-            return _getCharacterFirstNameHook.OriginalFunction(character);
-        }
-
-        var langName = name[(int)*_language];
-        if (langName == nuint.Zero)
-            return _getCharacterFirstNameHook.OriginalFunction(character);
-
-        return langName;
-    }
-
-    private nuint GetSLinkName(short sLink)
-    {
-        if (!_sLinkNames.TryGetValue(sLink, out var name))
-        {
-            return _getSLinkNameHook.OriginalFunction(sLink);
-        }
-
-        var langName = name[(int)*_language];
-        if (langName == nuint.Zero)
-            return _getSLinkNameHook.OriginalFunction(sLink);
-
-        return langName;
-    }
-
-    private nuint GetText(int major, int minor)
-    {
-        int id = major + minor;
-        if (!_hardcodedText.TryGetValue(id, out var text))
-        {
-            return _getTextHook.OriginalFunction(major, minor);
-        }
-
-        var langText = text[(int)*_language];
-        if (langText == nuint.Zero)
-            return _getTextHook.OriginalFunction(major, minor);
-
-        return langText;
-    }
     public void WriteRawPointermap()
     {
         foreach (var key in RawPointermap.Keys)
@@ -519,36 +294,9 @@ public unsafe class Mod : ModBase // <= Do not Remove.
                 
             });
         }    
-            
-        
         return;
     }
 
-    private nuint GetGlossaryText(int major, int minor)
-    {
-        
-        int id = 7 * major + minor;
-        if (!_glossaryText.TryGetValue(id, out var text))
-        {
-            return _getGlossaryTextHook.OriginalFunction(major, minor);
-        }
-
-        var langText = text[(int)*_language];
-        if (langText == nuint.Zero)
-            return _getGlossaryTextHook.OriginalFunction(major, minor);
-        //Utils.Log(langText);
-        return langText;
-    }
-    
-
-    /*private const uint FixedLayoutIdentifier = 0x04190419;
-    private delegate IntPtr GetKeyboardLayoutDelegate(uint idThread);
-    private IntPtr GetFixedKeyboardLayout(uint idThread)
-    {
-        try{return (IntPtr)FixedLayoutIdentifier;}
-        catch(Exception e){return _getGetKeyboardLayoutHook.OriginalFunction(idThread);} 
-    }    
-    */
 
     [Function(CallingConventions.Microsoft)]
     private delegate nuint GetNameDelegate(short id);
