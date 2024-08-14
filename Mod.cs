@@ -18,6 +18,13 @@ using Reloaded.Memory.Interfaces;
 using Reloaded.Memory.Utilities;
 using System;
 using System.Runtime.InteropServices;
+using Reloaded.Memory;
+using Reloaded.Memory.Sigscan;
+using Reloaded.Memory.Sigscan.Definitions.Structs;
+using Reloaded.Memory.Sigscan.Definitions;
+using Reloaded.Memory.SigScan.ReloadedII.Interfaces;
+using Microsoft.VisualBasic;
+using System.Text.Json.Serialization;
 
 namespace p3ppc.unhardcodedNames;
 
@@ -57,17 +64,29 @@ public unsafe class Mod : ModBase // <= Do not Remove.
     /// </summary>
     private readonly IModConfig _modConfig;
     
-    private Memory _memory;
+    public static Memory _memory;
+    private List<nuint> _allocatedPointers = new List<nuint>();
+    private List<Reloaded.Memory.Structs.MemoryAllocation> _allocatedMemory = new List<Reloaded.Memory.Structs.MemoryAllocation>();
 
-    private IHook<GetNameDelegate> _getItemNameHook;
-    private IHook<GetNameDelegate> _getCharacterFullNameHook;
-    private IHook<GetNameDelegate> _getCharacterFirstNameHook;
-    private IHook<GetNameDelegate> _getSLinkNameHook;
-    private IHook<GetTextDelegate> _getTextHook;
-    private IHook<GetTextDelegate> _getGlossaryTextHook;
     private Language* _language;
 
     private Dictionary<Language, Encoding> _encodings;
+    public class Item
+    {
+    [JsonPropertyName("text")]
+    public string Text { get; set; }
+
+    [JsonPropertyName("occurrences")]
+    public List<string> Occurrences { get; set; }
+    }
+    public class UlongItem
+    {
+    [JsonPropertyName("text")]
+    public string Text { get; set; }
+
+    [JsonPropertyName("occurrences")]
+    public List<ulong> Occurrences { get; set; }
+    }
     static byte[] HexStringToByteArray(string hexString)
     {
         hexString = hexString.Replace("\\x", ""); // Removing "\x" from the string
@@ -92,16 +111,30 @@ public unsafe class Mod : ModBase // <= Do not Remove.
 
         return byteDictionary;
     }
-    static Dictionary<ulong, string> DeserializeJsonPointermapToDictionary(string jsonString)
+    static Dictionary<ulong, UlongItem> DeserializeJsonPointermapToDictionary(string jsonString)
     {
-        Dictionary<string, string> stringDictionary = JsonSerializer.Deserialize<Dictionary<string, string>>(jsonString);
-        Dictionary<ulong, string> Dictionary = new Dictionary<ulong, string>();
-        foreach (var kvp in stringDictionary)
+
+        Dictionary<string, Item> items = JsonSerializer.Deserialize<Dictionary<string, Item>>(jsonString);
+        Dictionary<ulong, UlongItem> pointermap = new Dictionary<ulong, UlongItem>();
+
+        foreach (var kvp in items)
         {
-            Dictionary.Add(Convert.ToUInt64(kvp.Key , 16), kvp.Value);
+            // Convert the key from hex string to ulong
+            ulong key = Convert.ToUInt64(kvp.Key, 16);
+            List<ulong> occurences = new List<ulong>();
+            foreach (var occurrence in kvp.Value.Occurrences)
+            {
+                occurences.Add(Convert.ToUInt64(occurrence, 16));
+            }
+            UlongItem tempItem = new UlongItem
+            {
+                Text = kvp.Value.Text,
+                Occurrences = occurences
+            };
+            pointermap.Add(key, tempItem);
         }
 
-        return Dictionary;
+        return pointermap;
     }
     private void SetupEncodings()
     {
@@ -121,16 +154,13 @@ public unsafe class Mod : ModBase // <= Do not Remove.
         };
     }
     public Dictionary<string, byte[]>CustomEncoding;
-    public Dictionary<ulong, string>RawPointermap;
+    public Dictionary<ulong, UlongItem>Pointermap;
     [DllImport("kernel32.dll", SetLastError = true)]
     public static extern IntPtr LoadLibrary(string lpLibFileName);
 
     [DllImport("kernel32.dll", SetLastError = true)]
     public static extern IntPtr GetProcAddress(IntPtr hModule, string lpProcName);
-    [DllImport("user32.dll", SetLastError = true)]
-    public static extern IntPtr GetKeyboardLayout(uint idThread);
-    [DllImport("user32.dll", SetLastError = true)]
-    public static extern IntPtr LoadKeyboardLayout(string pwszKLID, uint Flags);
+
 
     public Mod(ModContext context)
     {
@@ -159,10 +189,10 @@ public unsafe class Mod : ModBase // <= Do not Remove.
         if (config.ModDependencies.Contains(_modConfig.ModId))
         {
             AddCustomEncoding(_modLoader.GetDirectoryForModId(config.ModId), "CustomEncoding.json");
-            AddRawPointermap(_modLoader.GetDirectoryForModId(config.ModId), "RawPointermap.json");
+            AddPointermap(_modLoader.GetDirectoryForModId(config.ModId), "Pointermap.json");
             //AddNamesFromDir(_modLoader.GetDirectoryForModId(config.ModId));
-            //Utils.LogError(RawPointermap[0x1405fcc78]);
-            WriteRawPointermap();
+            //Utils.LogError(Pointermap[0x1405fcc78]);
+            WritePointermap();
             
         }
             
@@ -180,12 +210,12 @@ public unsafe class Mod : ModBase // <= Do not Remove.
         var json = File.ReadAllText(encPath, Encoding.UTF8);
         CustomEncoding = DeserializeJsonEncodingToDictionary(json);
     }
-    public void AddRawPointermap(string dir, string nameFile)
+    public void AddPointermap(string dir, string nameFile)
     {
         var encPath = Path.Combine(dir, nameFile);
         if (!File.Exists(encPath)) return;
         var json = File.ReadAllText(encPath, Encoding.UTF8);
-        RawPointermap = DeserializeJsonPointermapToDictionary(json);
+        Pointermap = DeserializeJsonPointermapToDictionary(json);
     }
 
     private void AddNamesFromDir<T1, T2>(string dir, Dictionary<int, nuint[]> namesDict, string nameFile, Action<object, Dictionary<int, nuint[]>, int, int> WriteName)
@@ -255,11 +285,11 @@ public unsafe class Mod : ModBase // <= Do not Remove.
         return byteArray;
     }
 
-    private nuint WriteString(string text, Language language)
+    public nuint WriteString(string text, Language language)
     {
         
         byte[] bytes = new byte[0];
-        Utils.Log(Convert.ToString(CustomEncoding));
+        //Utils.Log(Convert.ToString(CustomEncoding));
         if (CustomEncoding!=null)
         {
             bytes = GetBytesCustomEnc(text);
@@ -268,33 +298,77 @@ public unsafe class Mod : ModBase // <= Do not Remove.
         {
             bytes = _encodings[language].GetBytes(text);
         }
-        var address = _memory.Allocate((nuint)bytes.Length).Address;
-        _memory.WriteRaw(address, bytes);
+        var allocated =_memory.Allocate((nuint)bytes.Length); 
+        var address = allocated.Address;
+        //_memory.WriteRaw(address, bytes);
+        Utils.LogError($"{text} {address:X}");
+        _memory.SafeWrite(address, bytes);
+        _allocatedPointers.Add(address);
+        _allocatedMemory.Add(allocated);
         return address;
     }
-    public void WriteRawPointermap()
+    public void WritePointermap()
     {
-        foreach (var key in RawPointermap.Keys)
+        foreach (var item in Pointermap)
         {
-            //Utils.LogError(RawPointermap[key]);
+            //Utils.LogError(Pointermap[key]);
             
             //Utils.LogError(string.Join(" ", BitConverter.GetBytes(key))); 
             
             
-            //Utils.LogError(string.Join(" ", BitConverter.GetBytes(WriteString(RawPointermap[key], (Language)1))));
+            //Utils.LogError(string.Join(" ", BitConverter.GetBytes(WriteString(Pointermap[key], (Language)1))));
             //Utils.LogError(string.Join(" ",BitConverter.GetBytes(key)));
-            var toSearchPattern = BitConverter.ToString(BitConverter.GetBytes(key)).Replace("-", " ");
+            //var toSearchPattern = BitConverter.ToString(BitConverter.GetBytes(key)).Replace("-", " ");
             //Utils.LogError(toSearchPattern);
             //Utils.SigScan()
-            Utils.SigScan(toSearchPattern, "WriteRawPointermap", address => 
+            /*Utils._startupScanner.AddMainModuleScan(toSearchPattern, (result) =>
             {
-                
-                //Utils.LogError($"found{address}");
-                _memory.SafeWrite((nuint)address, BitConverter.GetBytes(WriteString(RawPointermap[key], (Language)1)));
+                if (!result.Found)
+                {
+                    Utils.LogError($"Unable to find {toSearchPattern}, stuff won't work :(");
+                    return;
+                }
+                RecursiveReplace(toSearchPattern, Pointermap[key], result);
+            });
+            */
+            /*
+            Utils.SigScan(toSearchPattern, "WritePointermap", address => 
+            {
+                Utils.LogError($"found {address:X} {Pointermap[key]}");
+                _memory.SafeWrite((nuint)address, BitConverter.GetBytes(WriteString(Pointermap[key], Language.English)));
                 
             });
+            */
+            Utils.Log($"{item.Key} {item.Value.Text} Occurrences: {string.Join(", ", item.Value.Occurrences)}");
+            var address = WriteString(item.Value.Text, Language.English);
+            Span<byte> spanAddress;
+
+            // Use unsafe code to create a Span<byte> from the nuint
+            unsafe
+            {
+                spanAddress = new Span<byte>(&address, sizeof(nuint));
+            }
+            foreach (var occurence in item.Value.Occurrences)
+            {
+                _memory.SafeWrite((nuint)occurence, spanAddress);
+
+            }
+
+            
         }    
-        return;
+        
+    }
+    public void RecursiveReplace(string pattern, string text, PatternScanResult result, int memOffset=0)
+    {   
+        Utils.LogError($"{result.Offset + Utils.BaseAddress:X}");
+        _memory.SafeWrite((nuint)(result.Offset + Utils.BaseAddress), BitConverter.GetBytes(WriteString(text, Language.English)));
+        memOffset = result.Offset + pattern.Replace(" ", "").Length / 2;
+        result = Utils.ScanPattern(pattern, memOffset);
+        if (result.Found)
+        {
+            //RecursiveReplace(pattern, text, result, memOffset);
+        }
+    
     }
 
 
@@ -304,7 +378,7 @@ public unsafe class Mod : ModBase // <= Do not Remove.
     [Function(CallingConventions.Microsoft)]
     private delegate nuint GetTextDelegate(int major, int minor);
 
-    private enum Language : int
+    public enum Language : int
     {
         Japanese,
         English,

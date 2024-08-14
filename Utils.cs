@@ -1,4 +1,7 @@
 ﻿using p3ppc.unhardcodedNames.Configuration;
+using Reloaded.Memory.Interfaces;
+using Reloaded.Memory.Sigscan;
+using Reloaded.Memory.Sigscan.Definitions.Structs;
 using Reloaded.Memory.SigScan.ReloadedII.Interfaces;
 using Reloaded.Mod.Interfaces;
 using System;
@@ -14,6 +17,7 @@ internal class Utils
     private static ILogger _logger;
     private static Config _config;
     public static IStartupScanner _startupScanner;
+    public static Scanner scanner;
     internal static nint BaseAddress { get; private set; }
 
     internal static bool Initialise(ILogger logger, Config config, IModLoader modLoader)
@@ -22,7 +26,7 @@ internal class Utils
         _config = config;
         using var thisProcess = Process.GetCurrentProcess();
         BaseAddress = thisProcess.MainModule!.BaseAddress;
-
+        scanner = new Scanner(thisProcess, thisProcess.MainModule);
         var startupScannerController = modLoader.GetController<IStartupScanner>();
         if (startupScannerController == null || !startupScannerController.TryGetTarget(out _startupScanner))
         {
@@ -54,8 +58,12 @@ internal class Utils
     {
         _logger.WriteLine($"[Unhardcoded Names] {message}", System.Drawing.Color.Red);
     }
+    internal static PatternScanResult ScanPattern(string pattern, int offset)
+    {
+        return scanner.FindPattern(pattern, offset);
+    }
 
-    internal static void SigScan(string pattern, string name, Action<nint> action)
+    internal static void SigScan(string pattern, string name,Action<nint> action)
     {
         _startupScanner.AddMainModuleScan(pattern, result =>
         {
@@ -65,10 +73,10 @@ internal class Utils
                 return;
             }
             LogDebug($"Found {name} at 0x{result.Offset + BaseAddress:X}");
-
             action(result.Offset + BaseAddress);
         });
     }
+    
     
 
     // Pushes the value of an xmm register to the stack, saving it so it can be restored with PopXmm
