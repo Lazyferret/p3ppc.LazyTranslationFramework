@@ -1,6 +1,6 @@
-﻿using p3ppc.unhardcodedNames.Configuration;
+﻿using p3ppc.LazyTranslationFramework.Configuration;
 
-namespace p3ppc.unhardcodedNames.Template;
+namespace p3ppc.LazyTranslationFramework.Template;
 /// <summary>
 /// Base class for implementing mod functionality.
 /// </summary>

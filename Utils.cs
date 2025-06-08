@@ -1,4 +1,4 @@
-﻿using p3ppc.unhardcodedNames.Configuration;
+﻿namespace p3ppc.LazyTranslationFramework.Configuration;
 using Reloaded.Memory.Interfaces;
 using Reloaded.Memory.Sigscan;
 using Reloaded.Memory.Sigscan.Definitions.Structs;
@@ -11,7 +11,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace p3ppc.unhardcodedNames;
 internal class Utils
 {
     private static ILogger _logger;
@@ -41,29 +40,29 @@ internal class Utils
     internal static void LogDebug(string message)
     {
         if (_config.DebugEnabled)
-            _logger.WriteLine($"[Unhardcoded Names] {message}");
+            _logger.WriteLine($"[LazyTranslationFramework] {message}");
     }
 
     internal static void Log(string message)
     {
-        _logger.WriteLine($"[Unhardcoded Names] {message}");
+        _logger.WriteLine($"[LazyTranslationFramework] {message}");
     }
 
     internal static void LogError(string message, Exception e)
     {
-        _logger.WriteLine($"[Unhardcoded Names] {message}: {e.Message}", System.Drawing.Color.Red);
+        _logger.WriteLine($"[LazyTranslationFramework] {message}: {e.Message}", System.Drawing.Color.Red);
     }
 
     internal static void LogError(string message)
     {
-        _logger.WriteLine($"[Unhardcoded Names] {message}", System.Drawing.Color.Red);
+        _logger.WriteLine($"[LazyTranslationFramework] {message}", System.Drawing.Color.Red);
     }
     internal static PatternScanResult ScanPattern(string pattern, int offset)
     {
         return scanner.FindPattern(pattern, offset);
     }
 
-    internal static void SigScan(string pattern, string name,Action<nint> action)
+    internal static void SigScan(string pattern, string name, Action<nint> action)
     {
         _startupScanner.AddMainModuleScan(pattern, result =>
         {

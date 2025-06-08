@@ -1,24 +1,34 @@
 {
-  "ModId": "p3ppc.unhardcodedNames",
-  "ModName": "Unhardcoded Names",
-  "ModAuthor": "AnimatedSwine37",
+  "ModId": "p3ppc.LazyTranslationFramework",
+  "ModName": "LazyTranslationFramework",
+  "ModAuthor": "Lazyferret (original code AnimatedSwine37)",
   "ModVersion": "1.0.0",
-  "ModDescription": "Lets mods easily change the names of items (which were hardcoded) using files",
-  "ModDll": "p3ppc.unhardcodedNames.dll",
+  "ModDescription": "Lets mods easily change the everything in executable using files",
+  "ModDll": "p3ppc.LazyTranslationFramework.dll",
   "ModIcon": "Preview.png",
-  "ModR2RManagedDll32": "x86/p3ppc.unhardcodedNames.dll",
-  "ModR2RManagedDll64": "x64/p3ppc.unhardcodedNames.dll",
+  "ModR2RManagedDll32": "x86/p3ppc.LazyTranslationFramework.dll",
+  "ModR2RManagedDll64": "x64/p3ppc.LazyTranslationFramework.dll",
   "ModNativeDll32": "",
   "ModNativeDll64": "",
+  "Tags": [],
+  "CanUnload": null,
+  "HasExports": null,
   "IsLibrary": true,
-  "ReleaseMetadataFileName": "p3ppc.unhardcodedNames.ReleaseMetadata.json",
-  "PluginData": {},
+  "ReleaseMetadataFileName": "p3ppc.LazyTranslationFramework.ReleaseMetadata.json",
+  "PluginData": {
+    "GameBanana": {
+      "ItemType": "Mod",
+      "ItemId": 596634
+    }
+  },
   "IsUniversalMod": false,
   "ModDependencies": [
-    "reloaded.sharedlib.hooks",
-    "Reloaded.Memory.SigScan.ReloadedII"
+    "Reloaded.Memory.SigScan.ReloadedII",
+    "reloaded.sharedlib.hooks"
   ],
   "OptionalDependencies": [],
-  "SupportedAppId": ["p3p.exe"],
+  "SupportedAppId": [
+    "p3p.exe"
+  ],
   "ProjectUrl": ""
 }

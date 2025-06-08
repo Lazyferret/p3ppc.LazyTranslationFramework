@@ -1,7 +1,7 @@
-﻿using p3ppc.unhardcodedNames.Configuration;
+﻿using p3ppc.LazyTranslationFramework.Configuration;
 using Reloaded.Mod.Interfaces;
 
-namespace p3ppc.unhardcodedNames.Template.Configuration;
+namespace p3ppc.LazyTranslationFramework.Template.Configuration;
 public class Configurator : IConfiguratorV3
 {
     private static ConfiguratorMixin _configuratorMixin = new ConfiguratorMixin();

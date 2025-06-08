@@ -7,7 +7,7 @@
             "type": "process",
             "args": [
                 "build",
-                "${workspaceFolder}/p3ppc.unhardcodedNames.sln",
+                "${workspaceFolder}/p3ppc.LazyTranslationFramework.sln",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary;ForceNoAlign"
             ],
@@ -19,7 +19,7 @@
             "type": "process",
             "args": [
                 "publish",
-                "${workspaceFolder}/p3ppc.unhardcodedNames.sln",
+                "${workspaceFolder}/p3ppc.LazyTranslationFramework.sln",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary;ForceNoAlign"
             ],
@@ -33,7 +33,7 @@
                 "watch",
                 "run",
                 "--project",
-                "${workspaceFolder}/p3ppc.unhardcodedNames.sln"
+                "${workspaceFolder}/p3ppc.LazyTranslationFramework.sln"
             ],
             "problemMatcher": "$msCompile"
         }

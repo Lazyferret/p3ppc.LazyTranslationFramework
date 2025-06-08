@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics;
 
-namespace p3ppc.unhardcodedNames.Template.Configuration;
+namespace p3ppc.LazyTranslationFramework.Template.Configuration;
 public class Utilities
 {
     /// <param name="getValue">Function that retrieves the value.</param>

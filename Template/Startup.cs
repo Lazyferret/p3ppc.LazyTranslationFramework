@@ -3,13 +3,13 @@
  * to make it easier to upgrade to newer versions of the template.
 */
 
-using p3ppc.unhardcodedNames.Configuration;
-using p3ppc.unhardcodedNames.Template.Configuration;
+using p3ppc.LazyTranslationFramework.Configuration;
+using p3ppc.LazyTranslationFramework.Template.Configuration;
 using Reloaded.Hooks.ReloadedII.Interfaces;
 using Reloaded.Mod.Interfaces;
 using Reloaded.Mod.Interfaces.Internal;
 
-namespace p3ppc.unhardcodedNames.Template;
+namespace p3ppc.LazyTranslationFramework.Template;
 public class Startup : IMod
 {
     /// <summary>

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace p3ppc.unhardcodedNames;
+namespace p3ppc.LazyTranslationFramework;
 public class Name : IName<string?>
 {
     public int Id { get; set; }

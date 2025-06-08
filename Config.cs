@@ -1,7 +1,7 @@
-﻿using p3ppc.unhardcodedNames.Template.Configuration;
+﻿using p3ppc.LazyTranslationFramework.Template.Configuration;
 using System.ComponentModel;
 
-namespace p3ppc.unhardcodedNames.Configuration;
+namespace p3ppc.LazyTranslationFramework.Configuration;
 public class Config : Configurable<Config>
 {
     [DisplayName("Debug Mode")]

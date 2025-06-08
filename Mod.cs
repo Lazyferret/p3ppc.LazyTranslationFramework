@@ -1,5 +1,5 @@
-﻿using p3ppc.unhardcodedNames.Configuration;
-using p3ppc.unhardcodedNames.Template;
+﻿namespace p3ppc.LazyTranslationFramework.Configuration;
+using p3ppc.LazyTranslationFramework.Template;
 using Reloaded.Hooks.Definitions;
 using Reloaded.Hooks.Definitions.Enums;
 using Reloaded.Hooks.Definitions.X64;
@@ -25,8 +25,9 @@ using Reloaded.Memory.Sigscan.Definitions;
 using Reloaded.Memory.SigScan.ReloadedII.Interfaces;
 using Microsoft.VisualBasic;
 using System.Text.Json.Serialization;
+using System.Globalization;
+using global::p3ppc.LazyTranslationFramework.Template;
 
-namespace p3ppc.unhardcodedNames;
 
 /// <summary>
 /// Your mod logic goes here.
@@ -75,14 +76,43 @@ public unsafe class Mod : ModBase // <= Do not Remove.
     {
     [JsonPropertyName("text")]
     public string Text { get; set; }
+    [JsonPropertyName("original")]
+    public string Original { get; set; }
 
     [JsonPropertyName("occurrences")]
     public List<string> Occurrences { get; set; }
+    }
+    public class FileItem
+    {
+    [JsonPropertyName("file")]
+    public string File { get; set; }
+
+    [JsonPropertyName("occurrences")]
+    public List<string> Occurrences { get; set; }
+    }
+    public class FileItemRaw
+    {
+    [JsonPropertyName("offset")]
+    public int Offset { get; set; }
+    
+    [JsonPropertyName("file")]
+    public string File { get; set; }
+
     }
     public class UlongItem
     {
     [JsonPropertyName("text")]
     public string Text { get; set; }
+    [JsonPropertyName("original")]
+    public string Original { get; set; }
+
+    [JsonPropertyName("occurrences")]
+    public List<ulong> Occurrences { get; set; }
+    }
+    public class UlongFileItem
+    {
+    [JsonPropertyName("file")]
+    public string File { get; set; }
 
     [JsonPropertyName("occurrences")]
     public List<ulong> Occurrences { get; set; }
@@ -111,7 +141,7 @@ public unsafe class Mod : ModBase // <= Do not Remove.
 
         return byteDictionary;
     }
-    static Dictionary<ulong, UlongItem> DeserializeJsonPointermapToDictionary(string jsonString)
+    /*static Dictionary<ulong, UlongItem> DeserializeJsonPointermapToDictionary(string jsonString)
     {
 
         Dictionary<string, Item> items = JsonSerializer.Deserialize<Dictionary<string, Item>>(jsonString);
@@ -133,8 +163,75 @@ public unsafe class Mod : ModBase // <= Do not Remove.
             };
             pointermap.Add(key, tempItem);
         }
+        return pointermap;
+    }*/
+    static Dictionary<ulong, UlongItem> DeserializeJsonPointermapToDictionary(string jsonString)
+    {
+        // Изменяем тип Dictionary для десериализации, чтобы использовать класс UlongItem с новым свойством Original
+        Dictionary<string, Item> items = JsonSerializer.Deserialize<Dictionary<string, Item>>(jsonString);
+        Dictionary<ulong, UlongItem> pointermap = new Dictionary<ulong, UlongItem>();
+
+        foreach (var kvp in items)
+        {
+            ulong key = Convert.ToUInt64(kvp.Key, 16);
+            List<ulong> occurrences = new List<ulong>();
+
+            if (kvp.Value.Occurrences != null)
+            {
+                foreach (var occurrence in kvp.Value.Occurrences)
+                {
+                    occurrences.Add(Convert.ToUInt64(occurrence, 16));
+                }
+            }
+            else
+            {
+                Utils.LogError($"Хуйня {key:X}");
+                Utils.LogError($"Хуйня {kvp.Value.Text}");
+                Utils.LogError($"Хуйня {kvp.Value.Occurrences}");
+                
+            }
+
+            UlongItem tempItem = new UlongItem
+            {
+                Text = kvp.Value.Text,
+                Original = kvp.Value.Original,
+                Occurrences = occurrences
+            };
+            pointermap.Add(key, tempItem);
+        }
 
         return pointermap;
+    }
+    static Dictionary<ulong, UlongFileItem> DeserializeJsonEmbededFilesListToDictionary(string jsonString)
+    {
+
+        // Десериализуем JSON в словарь с ключами типа string
+        Dictionary<string, FileItem> items = JsonSerializer.Deserialize<Dictionary<string, FileItem>>(jsonString);
+        Dictionary<ulong, UlongFileItem> EmbededFilesList = new Dictionary<ulong, UlongFileItem>();
+
+        foreach (var kvp in items)
+        {
+            // Convert the key from hex string to ulong
+            ulong key = Convert.ToUInt64(kvp.Key, 16);
+            List<ulong> occurences = new List<ulong>();
+            foreach (var occurrence in kvp.Value.Occurrences)
+            {
+                occurences.Add(Convert.ToUInt64(occurrence, 16));
+            }
+            UlongFileItem tempItem = new UlongFileItem
+            {
+                File = kvp.Value.File,
+                Occurrences = occurences
+            };
+            EmbededFilesList.Add(key, tempItem);
+        }
+        return EmbededFilesList;
+    }
+    static Dictionary<string, FileItemRaw> DeserializeJsonEmbededFilesListRawToDictionary(string jsonString)
+    {
+        // Десериализуем JSON в словарь с ключами типа string
+        Dictionary<string, FileItemRaw> EmbededFilesList = JsonSerializer.Deserialize<Dictionary<string, FileItemRaw>>(jsonString);
+        return EmbededFilesList;
     }
     private void SetupEncodings()
     {
@@ -155,11 +252,16 @@ public unsafe class Mod : ModBase // <= Do not Remove.
     }
     public Dictionary<string, byte[]>CustomEncoding;
     public Dictionary<ulong, UlongItem>Pointermap;
+    public Dictionary<ulong, UlongFileItem>EmbededFileList;
+    public Dictionary<string, FileItemRaw>EmbededFileListRaw;
+    
     [DllImport("kernel32.dll", SetLastError = true)]
     public static extern IntPtr LoadLibrary(string lpLibFileName);
 
     [DllImport("kernel32.dll", SetLastError = true)]
     public static extern IntPtr GetProcAddress(IntPtr hModule, string lpProcName);
+    
+    public string ModDirectory;
 
 
     public Mod(ModContext context)
@@ -188,19 +290,20 @@ public unsafe class Mod : ModBase // <= Do not Remove.
     {
         if (config.ModDependencies.Contains(_modConfig.ModId))
         {
-            AddCustomEncoding(_modLoader.GetDirectoryForModId(config.ModId), "CustomEncoding.json");
-            AddPointermap(_modLoader.GetDirectoryForModId(config.ModId), "Pointermap.json");
+            ModDirectory = _modLoader.GetDirectoryForModId(config.ModId);
+            Utils.LogError($"Mod dir {ModDirectory}");
+            AddCustomEncoding(ModDirectory, "CustomEncoding.json");
+            AddPointermap(ModDirectory, "Pointermap.json");
             //AddNamesFromDir(_modLoader.GetDirectoryForModId(config.ModId));
             //Utils.LogError(Pointermap[0x1405fcc78]);
             WritePointermap();
+            AddEmbededFilesList(ModDirectory, "EmbededFiles.json");
+            WriteEmbededFiles();
+            AddEmbededFilesListRaw(ModDirectory, "EmbededFilesRawReplace.json");
+            WriteEmbededFilesRaw();
             
         }
             
-    }
-
-    private void DumpText()
-    {
-
     }
 
     public void AddCustomEncoding(string dir, string nameFile)
@@ -216,6 +319,20 @@ public unsafe class Mod : ModBase // <= Do not Remove.
         if (!File.Exists(encPath)) return;
         var json = File.ReadAllText(encPath, Encoding.UTF8);
         Pointermap = DeserializeJsonPointermapToDictionary(json);
+    }
+    public void AddEmbededFilesList(string dir, string nameFile)
+    {
+        var encPath = Path.Combine(dir, nameFile);
+        if (!File.Exists(encPath)) return;
+        var json = File.ReadAllText(encPath, Encoding.UTF8);
+        EmbededFileList = DeserializeJsonEmbededFilesListToDictionary(json);
+    }
+    public void AddEmbededFilesListRaw(string dir, string nameFile)
+    {
+        var encPath = Path.Combine(dir, nameFile);
+        if (!File.Exists(encPath)) return;
+        var json = File.ReadAllText(encPath, Encoding.UTF8);
+        EmbededFileListRaw = DeserializeJsonEmbededFilesListRawToDictionary(json);
     }
 
     private void AddNamesFromDir<T1, T2>(string dir, Dictionary<int, nuint[]> namesDict, string nameFile, Action<object, Dictionary<int, nuint[]>, int, int> WriteName)
@@ -253,11 +370,6 @@ public unsafe class Mod : ModBase // <= Do not Remove.
         }
     }
 
-    private void WriteGenericName(object langName, Dictionary<int, nuint[]> namesDict, int id, int lang)
-    {
-        var address = WriteString((string)langName, (Language)lang);
-        namesDict[id][lang] = address;
-    }
 
     private byte[] GetBytesCustomEnc(string text)
     {
@@ -301,12 +413,33 @@ public unsafe class Mod : ModBase // <= Do not Remove.
         var allocated =_memory.Allocate((nuint)bytes.Length); 
         var address = allocated.Address;
         //_memory.WriteRaw(address, bytes);
-        Utils.LogError($"{text} {address:X}");
+        Utils.LogError($"{text} 0x{address:X}");
         _memory.SafeWrite(address, bytes);
         _allocatedPointers.Add(address);
         _allocatedMemory.Add(allocated);
         return address;
     }
+    public nuint WriteFile(nuint address, byte[] file, int offset = 0)
+    {
+        Utils.LogError($"file {address:X}");
+        nuint finalAddress = address + (nuint)offset;
+        //_memory.ChangeProtectionRaw(finalAddress, file.Length, 64);
+        //_memory.WriteRaw(finalAddress, file);
+        _memory.SafeWrite(finalAddress, file);
+        return finalAddress;
+    }
+    public nuint WriteFileAlloc(byte[] file)
+    {
+        var allocated =_memory.Allocate((nuint)file.Length); 
+        var address = allocated.Address;
+        Utils.LogError($"file {address:X}");
+        _memory.SafeWrite(address, file);
+         _allocatedPointers.Add(address);
+        _allocatedMemory.Add(allocated);
+        return address;
+    }
+
+
     public void WritePointermap()
     {
         foreach (var item in Pointermap)
@@ -339,7 +472,7 @@ public unsafe class Mod : ModBase // <= Do not Remove.
                 
             });
             */
-            Utils.Log($"{item.Key} {item.Value.Text} Occurrences: {string.Join(", ", item.Value.Occurrences)}");
+            Utils.Log($"0x{item.Key:X} {item.Value.Text} Occurrences: {string.Join(", ", item.Value.Occurrences.Select(x => $"0x{x:X}"))}");
             var address = WriteString(item.Value.Text, Language.English);
             Span<byte> spanAddress;
 
@@ -356,6 +489,80 @@ public unsafe class Mod : ModBase // <= Do not Remove.
 
             
         }    
+        
+    }
+    public void WriteEmbededFiles()
+    {
+        
+        string directoryPath = ModDirectory + "\\EmbededFiles";
+        foreach (var fileEntry in EmbededFileList)
+        {
+            Utils.Log($"0x{fileEntry.Key:X} {fileEntry.Value.File} Occurrences: {string.Join(", ", fileEntry.Value.Occurrences.Select(addr => $"0x{addr:X}"))}");
+            ulong fileKey = fileEntry.Key;
+            string fileName = fileEntry.Value.File;
+            string filePath = Path.Combine(directoryPath, fileName);
+
+            if (File.Exists(filePath))
+            {
+                // Чтение файла как массива байтов
+                byte[] fileData = File.ReadAllBytes(filePath);
+                var address = WriteFileAlloc(fileData);
+                Span<byte> spanAddress;
+
+                // Use unsafe code to create a Span<byte> from the nuint
+                unsafe
+                {
+                    spanAddress = new Span<byte>(&address, sizeof(nuint));
+                }
+                foreach (var occurence in fileEntry.Value.Occurrences)
+                {
+                    _memory.SafeWrite((nuint)occurence, spanAddress);
+                }
+
+                Utils.LogError($"Файл {fileName} успешно загружен.");
+            }
+            else
+            {
+                Utils.LogError($"Файл {fileName} не найден по пути: {filePath}");
+            }
+        }
+        
+    }
+    public void WriteEmbededFilesRaw()
+    {
+        
+        string directoryPath = ModDirectory + "\\EmbededFiles";
+        foreach (var fileEntry in EmbededFileListRaw)
+        {
+            Utils.Log($"0x{fileEntry.Key:X} {fileEntry.Value.File} Occurrences: {string.Join(", ", fileEntry.Value)}:X");
+            string fileSignature = fileEntry.Key;
+            string fileName = fileEntry.Value.File;
+            string filePath = Path.Combine(directoryPath, fileName);
+            int fileoffset = fileEntry.Value.Offset;
+            
+
+            if (File.Exists(filePath))
+            {
+                // Чтение файла как массива байтов
+                byte[] fileData = File.ReadAllBytes(filePath);
+                Utils.SigScan(fileSignature, fileName, address => 
+                {
+                    Utils.LogError($"found {address:X} {fileName}");
+                    WriteFile((nuint)address, fileData, fileoffset);
+                });
+                
+                //var address = Utils.SigScan(, (int)Utils.BaseAddress);
+                //WriteFile((nuint)address.Offset, fileData, fileoffset);
+                //Utils.LogError($"хуйня? {address.Offset}");
+                
+                
+                Utils.LogError($"Файл {fileName} успешно загружен.");
+            }
+            else
+            {
+                Utils.LogError($"Файл {fileName} не найден по пути: {filePath}");
+            }
+        }
         
     }
     public void RecursiveReplace(string pattern, string text, PatternScanResult result, int memOffset=0)

@@ -2,8 +2,8 @@
 Split-Path $MyInvocation.MyCommand.Path | Push-Location
 [Environment]::CurrentDirectory = $PWD
 
-Remove-Item "$env:RELOADEDIIMODS/p3ppc.unhardcodedNames/*" -Force -Recurse
-dotnet publish "./p3ppc.unhardcodedNames.csproj" -c Release -o "$env:RELOADEDIIMODS/p3ppc.unhardcodedNames" /p:OutputPath="./bin/Release" /p:ReloadedILLink="true"
+Remove-Item "$env:RELOADEDIIMODS/p3ppc.LazyTranslationFramework/*" -Force -Recurse
+dotnet publish "./p3ppc.LazyTranslationFramework.csproj" -c Release -o "$env:RELOADEDIIMODS/p3ppc.LazyTranslationFramework" /p:OutputPath="./bin/Release" /p:ReloadedILLink="true"
 
 # Restore Working Directory
 Pop-Location

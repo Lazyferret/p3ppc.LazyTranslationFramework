@@ -1,8 +1,8 @@
-﻿using p3ppc.unhardcodedNames.Configuration;
+﻿using p3ppc.LazyTranslationFramework.Configuration;
 using Reloaded.Mod.Interfaces;
 using IReloadedHooks = Reloaded.Hooks.ReloadedII.Interfaces.IReloadedHooks;
 
-namespace p3ppc.unhardcodedNames.Template;
+namespace p3ppc.LazyTranslationFramework.Template;
 /// <summary>
 /// Represents information passed in from the mod loader template to the implementing mod.
 /// </summary>

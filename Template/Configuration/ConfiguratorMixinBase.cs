@@ -1,7 +1,7 @@
-﻿using p3ppc.unhardcodedNames.Configuration;
+﻿using p3ppc.LazyTranslationFramework.Configuration;
 using Reloaded.Mod.Interfaces;
 
-namespace p3ppc.unhardcodedNames.Template.Configuration;
+namespace p3ppc.LazyTranslationFramework.Template.Configuration;
 /// <summary>
 /// Creates the various different configurations used by the mod.
 /// These configurations are available in the dropdown in Reloaded launcher. 
