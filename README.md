@@ -1,6 +1,8 @@
 # p3ppc.LazyTranslationFramework
 # Persona 3 Portable EXE Text Unhardcoding Mod
 
+![Mod screenshot](https://images.gamebanana.com/img/ss/mods/68456b52b3b94.jpg)
+
 This mod aims to simplify the process of implementing fan translations into *Persona 3 Portable* by unhardcoding text stored within the game's executable (EXE). It provides a more flexible way to handle custom translations without requiring extensive binary edits.
 
 ## Key Features:
